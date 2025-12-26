@@ -1,41 +1,17 @@
-import { useEffect, useState } from 'react';
-import echo from './lib/echo';
+import { Link } from 'react-router-dom';
 
-function App() {
-    const [messages, setMessages] = useState([]);
-
-    useEffect(() => {
-        console.log("Listening for messages...");
-        
-        const channel = echo.channel('chat');
-
-        // Option A: Explicit name with dot
-        channel.listen('.message.sent', (e) => {
-            console.log('Caught via .message.sent:', e);
-            setMessages((prev) => [...prev, e.message]);
-        });
-
-        // Option B: Standard name (if broadcastAs failed)
-        channel.listen('MessageSent', (e) => {
-            console.log('Caught via MessageSent:', e);
-            setMessages((prev) => [...prev, e.message]);
-        });
-
-        return () => echo.leaveChannel('chat');
-}, []);
-
+export default function App() {
     return (
-        <div style={{ padding: '20px' }}>
-            <h1>Real-time Chat</h1>
-            <ul>
-                {messages.map((msg, index) => (
-                    <li key={index}>
-                        <strong>{msg.user.name}:</strong> {msg.body}
-                    </li>
-                ))}
-            </ul>
+        <div className="min-h-screen flex items-center justify-center p-6">
+            <div className="w-full max-w-lg rounded-lg shadow p-6 bg-white/70 dark:bg-gray-800/70 backdrop-blur text-center">
+                <h1 className="text-3xl font-semibold mb-3">Realtime Chat</h1>
+                <p className="mb-6 text-gray-600 dark:text-gray-300">Sign up or log in to start chatting.</p>
+                <div className="flex gap-3 justify-center">
+                    <Link className="inline-flex items-center px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700" to="/signup">Create account</Link>
+                    <Link className="inline-flex items-center px-4 py-2 rounded-md bg-gray-600 text-white hover:bg-gray-700" to="/login">Sign in</Link>
+                </div>
+            </div>
         </div>
     );
 }
 
-export default App;

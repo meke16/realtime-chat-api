@@ -21,11 +21,15 @@ class MessageSent implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-        // For now, let's use a public channel to make testing easier.
-        // We can switch to PrivateChannel later for security.
-        return [
-            new Channel('chat'),
-        ];
+        // If recipient_id is set, broadcast to a conversation-specific channel.
+        if ($this->message->recipient_id) {
+            $a = min($this->message->user_id, $this->message->recipient_id);
+            $b = max($this->message->user_id, $this->message->recipient_id);
+            return [new Channel("chat.dm.$a-$b")];
+        }
+
+        // Otherwise, broadcast to the public chat channel.
+        return [new Channel('chat')];
     }
 
     public function broadcastAs(): string
