@@ -1,59 +1,90 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Realtime Chat API (learning project)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A compact realtime chat API built on Laravel with a small WebSocket "Reverb" server for learning realtime communication patterns.
 
-## About Laravel
+**What's already in place**
+- **Authentication**: token-based (see `database/migrations/2025_12_26_073648_create_personal_access_tokens_table.php` and `config/sanctum.php`).
+- **WebSocket server (Reverb)**: a lightweight server used for realtime message transport (see `resources/js/echo.js` and `routes/channels.php`).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+This repo focuses on moving from Authentication (working) to Communication: defining message shapes and sending the first ping across WebSocket.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+**Architecture overview**
+- **HTTP layer**: Laravel controllers in `app/Http/Controllers` handle login, token issuance, and REST endpoints (see `routes/api.php`).
+- **Persistence**: Eloquent models in `app/Models` (notably `User.php`) and migrations in `database/migrations`.
+- **Realtime transport**: Reverb WebSocket server receives and relays JSON messages. Clients connect with an authenticated token and subscribe to channels.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Design note: the system separates authentication (HTTP + tokens) from realtime messaging (WebSocket) so you can reason about auth once and reuse tokens for the WebSocket handshake.
 
-## Learning Laravel
+Message / data structure
+The following minimal message schema is recommended for learning and interop:
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+```json
+{
+	"id": "uuid-v4",
+	"type": "ping",                // ping | message | ack | join | leave
+	"from": "user:123",           // sender identifier
+	"to": "channel:global" ,      // channel or user target
+	"ts": 1690000000,               // unix timestamp (seconds)
+	"payload": { "text": "hello" }
+}
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Example: the first "ping" to test connectivity
 
-## Laravel Sponsors
+- Client -> Reverb: send a `ping` message using the schema above.
+- Reverb -> Client(s): echo back an `ack` or forward the `ping` to subscribed clients.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Quick examples
 
-### Premium Partners
+- Obtain a token (example):
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+curl -X POST http://localhost:8000/api/login \
+	-H "Content-Type: application/json" \
+	-d '{"email":"you@example.com","password":"secret"}'
+# response contains `token` (use as Bearer)
+```
 
-## Contributing
+- Connect to Reverb (JavaScript, minimal):
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```js
+const token = 'PASTE_TOKEN_HERE';
+const ws = new WebSocket('ws://localhost:6000?token=' + encodeURIComponent(token));
+ws.onopen = () => {
+	const ping = { id: '1', type: 'ping', from: 'user:1', to: 'channel:global', ts: Math.floor(Date.now()/1000), payload: {} };
+	ws.send(JSON.stringify(ping));
+};
+ws.onmessage = (evt) => console.log('recv', JSON.parse(evt.data));
+```
 
-## Code of Conduct
+- Send ping via HTTP endpoint (if present):
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+curl -X POST http://localhost:8000/api/messages \
+	-H "Authorization: Bearer <TOKEN>" \
+	-H "Content-Type: application/json" \
+	-d '{"type":"ping","to":"channel:global","payload":{}}'
+```
 
-## Security Vulnerabilities
+Where the HTTP handler may validate and forward the payload to Reverb (server-to-server call or via queue).
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Useful file pointers
+- `app/Models/User.php` — user model and relationships
+- `app/Http/Controllers` — auth and API controllers
+- `routes/api.php` — REST endpoints
+- `routes/channels.php` — broadcast channel definitions
+- `resources/js/echo.js` — client-side echo/connection helpers
 
-## License
+Next steps (recommended for learning)
+1. Define the first message contract (`ping`, `message`, `ack`) and add a JSON Schema or PHP DTO for validation.
+2. Implement a small HTTP route to POST a test `ping` that the server forwards to Reverb.
+3. Add a minimal JS client in `resources/js` that connects with token and performs the first ping/ack handshake.
+4. Add logging in Reverb to print received messages and a test that the `ping` is echoed back.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+If you'd like, I can:
+- add the JSON Schema file and a PHP validator in `app/Http/Requests`,
+- implement the HTTP test route and a tiny JS example client in `resources/js`,
+- or produce step-by-step testing commands you can run locally.
+
+---
+Small note: this README replaces the default Laravel placeholder with a focused architecture summary and actionable next steps for the realtime chat learning path.
