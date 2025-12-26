@@ -13,7 +13,6 @@ The frontend connects to the backend over HTTP and WebSockets to send and receiv
 
 - `frontend/` — Vite/React single-page app
 - `realtime-chat-api/` — Laravel app (API, events, broadcasting)
-- `realtime-chat-api-local-backup-20251226/` — Local backup artifacts (not required to run)
 
 ---
 
