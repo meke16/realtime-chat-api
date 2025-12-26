@@ -1,0 +1,35 @@
+# General
+.DS_Store
+Thumbs.db
+.env
+.env.*
+.vscode/
+.idea/
+
+# Node / Vite (frontend)
+node_modules/
+dist/
+.vite/
+
+# Laravel (realtime-chat-api)
+vendor/
+storage/*.key
+storage/*.cache
+storage/debugbar/
+storage/framework/
+storage/logs/
+storage/app/private/
+storage/app/public/.gitignore
+bootstrap/cache/
+
+# Laravel build assets
+public/build/
+
+# Misc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local backup of nested .git
+realtime-chat-api/.git_backup_*
