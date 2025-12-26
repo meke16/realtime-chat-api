@@ -27,4 +27,9 @@ class MessageSent implements ShouldBroadcast
             new Channel('chat'),
         ];
     }
+
+    public function broadcastAs(): string
+    {
+        return 'message.sent';
+    }
 }

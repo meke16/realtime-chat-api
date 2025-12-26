@@ -5,17 +5,24 @@ function App() {
     const [messages, setMessages] = useState([]);
 
     useEffect(() => {
-        // Listen to the public channel 'chat'
-        const channel = echo.channel('chat')
-            .listen('MessageSent', (e) => {
-                console.log('New message received:', e.message);
-                setMessages((prev) => [...prev, e.message]);
-            });
+        console.log("Listening for messages...");
+        
+        const channel = echo.channel('chat');
 
-        return () => {
-            channel.stopListening('MessageSent');
-        };
-    }, []);
+        // Option A: Explicit name with dot
+        channel.listen('.message.sent', (e) => {
+            console.log('Caught via .message.sent:', e);
+            setMessages((prev) => [...prev, e.message]);
+        });
+
+        // Option B: Standard name (if broadcastAs failed)
+        channel.listen('MessageSent', (e) => {
+            console.log('Caught via MessageSent:', e);
+            setMessages((prev) => [...prev, e.message]);
+        });
+
+        return () => echo.leaveChannel('chat');
+}, []);
 
     return (
         <div style={{ padding: '20px' }}>

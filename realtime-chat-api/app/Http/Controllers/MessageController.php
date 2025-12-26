@@ -14,17 +14,19 @@ class MessageController extends Controller
         return Message::with('user')->latest()->limit(50)->get()->reverse()->values();
     }
 
-    public function store(Request $request)
-    {
-        $request->validate(['body' => 'required|string']);
+// MessageController.php
 
-        $message = $request->user()->messages()->create([
-            'body' => $request->body,
-        ]);
+public function store(Request $request)
+{
+    $request->validate(['body' => 'required|string']);
 
-        // This triggers the WebSocket broadcast
-        broadcast(new MessageSent($message->load('user')))->toOthers();
+    $message = $request->user()->messages()->create([
+        'body' => $request->body,
+    ]);
 
-        return $message;
-    }
+    // CHANGE THIS: Remove ->toOthers()
+    broadcast(new MessageSent($message->load('user'))); 
+
+    return $message;
+}
 }
