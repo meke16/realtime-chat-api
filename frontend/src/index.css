@@ -1,0 +1,4 @@
+@import "tailwindcss";
+
+/* Minimal global style without @apply to avoid plugin issues */
+:root { color-scheme: light dark; }
